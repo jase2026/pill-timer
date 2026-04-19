@@ -75,6 +75,40 @@
       margin-top: -6px;
     }
 
+    /* Tablet count toggle */
+    .dose-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+    .dose-btn {
+      flex: 1;
+      padding: 12px 0;
+      font-size: 1.8rem;
+      font-weight: bold;
+      background: #222;
+      color: #777;
+      border: 2px solid #444;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .dose-btn.selected {
+      background: #1a4a1a;
+      color: #4cdf4c;
+      border-color: #4cdf4c;
+    }
+    .dose-label {
+      font-size: 0.85rem;
+      color: #666;
+      text-align: center;
+      margin-top: -6px;
+    }
+
     /* The big button */
     .swallow-btn {
       width: 100%;
@@ -112,6 +146,11 @@
     <input class="pill-name" id="name1" type="text" value="Paracetamol" placeholder="Pill name" />
     <div class="elapsed unseen" id="elapsed1">Not yet taken</div>
     <div class="elapsed-sub" id="sub1">Press button when you take this pill</div>
+    <div class="dose-row">
+      <button class="dose-btn selected" id="dose1-1" onclick="setDose(1, 1)">1</button>
+      <button class="dose-btn"          id="dose1-2" onclick="setDose(1, 2)">2</button>
+    </div>
+    <div class="dose-label" id="doselabel1">Taking 1 tablet</div>
     <button class="swallow-btn" id="btn1" onclick="pillTaken(1)">💊 PILL SWALLOWED</button>
   </div>
 
@@ -122,6 +161,11 @@
     <input class="pill-name" id="name2" type="text" value="Ibuprofen" placeholder="Pill name" />
     <div class="elapsed unseen" id="elapsed2">Not yet taken</div>
     <div class="elapsed-sub" id="sub2">Press button when you take this pill</div>
+    <div class="dose-row">
+      <button class="dose-btn selected" id="dose2-1" onclick="setDose(2, 1)">1</button>
+      <button class="dose-btn"          id="dose2-2" onclick="setDose(2, 2)">2</button>
+    </div>
+    <div class="dose-label" id="doselabel2">Taking 1 tablet</div>
     <button class="swallow-btn" id="btn2" onclick="pillTaken(2)">💊 PILL SWALLOWED</button>
   </div>
 
@@ -136,6 +180,20 @@
     }
 
     const SAFE_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+
+    // Track selected dose count per pill (defaults to 1)
+    const dose = { 1: 1, 2: 1 };
+
+    // Select 1 or 2 tablets for a given pill section
+    function setDose(pill, count) {
+      dose[pill] = count;
+      // Update button highlight
+      document.getElementById('dose' + pill + '-1').classList.toggle('selected', count === 1);
+      document.getElementById('dose' + pill + '-2').classList.toggle('selected', count === 2);
+      // Update label
+      document.getElementById('doselabel' + pill).textContent =
+        'Taking ' + count + ' tablet' + (count > 1 ? 's' : '');
+    }
 
     // Load saved timestamps and names from localStorage
     function load() {
@@ -157,6 +215,7 @@
     function pillTaken(n) {
       const now = Date.now();
       localStorage.setItem('pillTs' + n, now);
+      localStorage.setItem('pillDose' + n, dose[n]);
       const btn = document.getElementById('btn' + n);
       btn.classList.remove('pressed');
       void btn.offsetWidth; // force reflow to restart animation
@@ -188,19 +247,21 @@
         } else {
           const elapsed = now - parseInt(ts, 10);
           elEl.textContent = formatElapsed(elapsed);
+          const lastDose = localStorage.getItem('pillDose' + i) || '1';
+          const doseNote = ' · last dose: ' + lastDose + ' tablet' + (lastDose > 1 ? 's' : '');
 
           if (elapsed >= SAFE_MS) {
             elEl.className = 'elapsed due';
-            subEl.textContent = '✅ OK to take again';
+            subEl.textContent = '✅ OK to take again' + doseNote;
           } else {
             elEl.className = 'elapsed safe';
             const remaining = SAFE_MS - elapsed;
             const rh = Math.floor(remaining / 3600000);
             const rm = Math.floor((remaining % 3600000) / 60000);
             if (rh > 0) {
-              subEl.textContent = rh + 'h ' + rm + 'm until next dose';
+              subEl.textContent = rh + 'h ' + rm + 'm until next dose' + doseNote;
             } else {
-              subEl.textContent = rm + 'm until next dose';
+              subEl.textContent = rm + 'm until next dose' + doseNote;
             }
           }
         }
