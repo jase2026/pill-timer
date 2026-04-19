@@ -2,7 +2,7 @@
   "name": "Pill Timer",
   "short_name": "Pill Timer",
   "description": "Track when you last took each pill",
-  "start_url": "./pill_timer.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#111111",
