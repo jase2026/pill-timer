@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#111111" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Pill Timer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .pill-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 18px 14px;
+      gap: 12px;
+    }
+
+    .divider {
+      height: 3px;
+      background: #444;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    /* Editable pill name */
+    .pill-name {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #ccc;
+      background: transparent;
+      border: none;
+      border-bottom: 2px dashed #555;
+      text-align: center;
+      width: 100%;
+      outline: none;
+      padding: 4px 0;
+    }
+    .pill-name:focus {
+      border-bottom-color: #aaa;
+      color: #fff;
+    }
+
+    /* The big elapsed time */
+    .elapsed {
+      font-size: 3.8rem;
+      font-weight: bold;
+      line-height: 1.1;
+      text-align: center;
+      transition: color 0.5s;
+    }
+    .elapsed.safe   { color: #4cdf4c; }
+    .elapsed.due    { color: #ff4444; }
+    .elapsed.unseen { color: #aaa; }
+
+    .elapsed-sub {
+      font-size: 1rem;
+      color: #888;
+      text-align: center;
+      margin-top: -6px;
+    }
+
+    /* The big button */
+    .swallow-btn {
+      width: 100%;
+      padding: 18px 10px;
+      font-size: 1.4rem;
+      font-weight: bold;
+      background: #333;
+      color: #fff;
+      border: 2px solid #555;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .swallow-btn:active {
+      background: #555;
+    }
+
+    /* Flash animation on press */
+    @keyframes flash {
+      0%   { background: #2a7a2a; }
+      100% { background: #333; }
+    }
+    .swallow-btn.pressed {
+      animation: flash 0.6s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PILL 1 -->
+  <div class="pill-section" id="section1">
+    <input class="pill-name" id="name1" type="text" value="Paracetamol" placeholder="Pill name" />
+    <div class="elapsed unseen" id="elapsed1">Not yet taken</div>
+    <div class="elapsed-sub" id="sub1">Press button when you take this pill</div>
+    <button class="swallow-btn" id="btn1" onclick="pillTaken(1)">💊 PILL SWALLOWED</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- PILL 2 -->
+  <div class="pill-section" id="section2">
+    <input class="pill-name" id="name2" type="text" value="Ibuprofen" placeholder="Pill name" />
+    <div class="elapsed unseen" id="elapsed2">Not yet taken</div>
+    <div class="elapsed-sub" id="sub2">Press button when you take this pill</div>
+    <button class="swallow-btn" id="btn2" onclick="pillTaken(2)">💊 PILL SWALLOWED</button>
+  </div>
+
+  <script>
+    // Register service worker for PWA install prompt
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('SW registration failed:', err);
+        });
+      });
+    }
+
+    const SAFE_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+
+    // Load saved timestamps and names from localStorage
+    function load() {
+      for (let i = 1; i <= 2; i++) {
+        const savedName = localStorage.getItem('pillName' + i);
+        if (savedName) document.getElementById('name' + i).value = savedName;
+      }
+    }
+
+    // Save pill name when user edits it
+    document.getElementById('name1').addEventListener('change', () => {
+      localStorage.setItem('pillName1', document.getElementById('name1').value);
+    });
+    document.getElementById('name2').addEventListener('change', () => {
+      localStorage.setItem('pillName2', document.getElementById('name2').value);
+    });
+
+    // Record the time a pill was taken
+    function pillTaken(n) {
+      const now = Date.now();
+      localStorage.setItem('pillTs' + n, now);
+      const btn = document.getElementById('btn' + n);
+      btn.classList.remove('pressed');
+      void btn.offsetWidth; // force reflow to restart animation
+      btn.classList.add('pressed');
+      updateDisplay();
+    }
+
+    // Format elapsed milliseconds into "Xh Ym ago"
+    function formatElapsed(ms) {
+      const totalSecs = Math.floor(ms / 1000);
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      if (h === 0) return m + 'm ago';
+      return h + 'h ' + m + 'm ago';
+    }
+
+    // Update both timer displays
+    function updateDisplay() {
+      const now = Date.now();
+      for (let i = 1; i <= 2; i++) {
+        const ts = localStorage.getItem('pillTs' + i);
+        const elEl = document.getElementById('elapsed' + i);
+        const subEl = document.getElementById('sub' + i);
+
+        if (!ts) {
+          elEl.textContent = 'Not yet taken';
+          elEl.className = 'elapsed unseen';
+          subEl.textContent = 'Press button when you take this pill';
+        } else {
+          const elapsed = now - parseInt(ts, 10);
+          elEl.textContent = formatElapsed(elapsed);
+
+          if (elapsed >= SAFE_MS) {
+            elEl.className = 'elapsed due';
+            subEl.textContent = '✅ OK to take again';
+          } else {
+            elEl.className = 'elapsed safe';
+            const remaining = SAFE_MS - elapsed;
+            const rh = Math.floor(remaining / 3600000);
+            const rm = Math.floor((remaining % 3600000) / 60000);
+            if (rh > 0) {
+              subEl.textContent = rh + 'h ' + rm + 'm until next dose';
+            } else {
+              subEl.textContent = rm + 'm until next dose';
+            }
+          }
+        }
+      }
+    }
+
+    // Initialise
+    load();
+    updateDisplay();
+
+    // Refresh every 30 seconds
+    setInterval(updateDisplay, 30000);
+  </script>
+</body>
+</html>
