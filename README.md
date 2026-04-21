@@ -12,8 +12,9 @@ Built for elderly or forgetful users who need to know at a glance whether it's s
 
 - Tracks **two pills independently** — one per half of the screen
 - Shows the **time elapsed since the last dose** in very large text
-- Turns **green** when under 4 hours (too soon to take again) and **red** when 4+ hours have passed (safe to take again)
+- Turns **green** while it's too soon to take again and **red** when it's safe — based on each pill's own interval
 - Shows exactly how long until the next dose is safe
+- **Configurable dose interval per pill** — tap − / + to set anywhere from 1 to 24 hours (e.g. 4h for paracetamol, 12h for a slow-release tablet). The setting persists between sessions
 - Lets you record **1 or 2 tablets** per dose
 - Remembers the **last dose time even when the app is closed** or the phone restarts
 - Pill names are **editable** — tap to rename (e.g. Paracetamol, Ibuprofen)
@@ -71,7 +72,7 @@ You're welcome to fork this project and host your own version. Everything is in 
 
 ### How to customise
 
-- **Change the 4-hour window** — find `const SAFE_MS = 4 * 60 * 60 * 1000` in `index.html` and change `4` to however many hours you need
+- **Change the default dose interval** — find `const DEFAULT_HOURS = 4` in `index.html` and change `4` to your preferred default. Users can also adjust it live in the app using the − / + buttons
 - **Change the default pill names** — find `value="Paracetamol"` and `value="Ibuprofen"` in the HTML and update them
 - **Change from 2 pills to 1** — remove the second `.pill-section` block and the `.divider`
 
@@ -90,16 +91,15 @@ You're welcome to fork this project and host your own version. Everything is in 
 - Timestamps stored in `localStorage` (survives app close and phone restart)
 - Timer refreshes every 30 seconds
 - Works fully offline once installed (via service worker cache)
-- `localStorage` keys: `pillTs1`, `pillTs2` (epoch ms), `pillName1`, `pillName2`, `pillDose1`, `pillDose2`
+- `localStorage` keys: `pillTs1`, `pillTs2` (epoch ms), `pillName1`, `pillName2`, `pillDoseCount1`, `pillDoseCount2`, `pillInterval1`, `pillInterval2` (hours)
 
 ---
 
 ## Possible future improvements
 
-- [ ] Alarm / notification after 4 hours
+- [ ] Alarm / notification when the next dose is due
 - [ ] Dose history log
 - [ ] Support for more than two pills
-- [ ] Configurable dose interval (not just 4 hours)
 - [ ] Max doses per day counter
 
 Pull requests welcome!
