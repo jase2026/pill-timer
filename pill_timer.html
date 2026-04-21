@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#111111" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Pill Timer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .pill-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 14px;
+      gap: 10px;
+    }
+
+    .divider {
+      height: 3px;
+      background: #444;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    /* Editable pill name */
+    .pill-name {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #ccc;
+      background: transparent;
+      border: none;
+      border-bottom: 2px dashed #555;
+      text-align: center;
+      width: 100%;
+      outline: none;
+      padding: 4px 0;
+    }
+    .pill-name:focus {
+      border-bottom-color: #aaa;
+      color: #fff;
+    }
+
+    /* The big elapsed time */
+    .elapsed {
+      font-size: 3.6rem;
+      font-weight: bold;
+      line-height: 1.1;
+      text-align: center;
+      transition: color 0.5s;
+    }
+    .elapsed.safe   { color: #4cdf4c; }
+    .elapsed.due    { color: #ff4444; }
+    .elapsed.unseen { color: #aaa; }
+
+    .elapsed-sub {
+      font-size: 0.95rem;
+      color: #888;
+      text-align: center;
+      margin-top: -4px;
+    }
+
+    /* Shared row style for tablet count + interval controls */
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .control-label {
+      font-size: 0.8rem;
+      color: #555;
+      text-align: center;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Tablet count toggle: 1 / 2 */
+    .dose-btn {
+      flex: 1;
+      padding: 11px 0;
+      font-size: 1.7rem;
+      font-weight: bold;
+      background: #222;
+      color: #777;
+      border: 2px solid #444;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .dose-btn.selected {
+      background: #1a4a1a;
+      color: #4cdf4c;
+      border-color: #4cdf4c;
+    }
+
+    /* Interval +/- row */
+    .interval-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      width: 100%;
+      background: #1a1a1a;
+      border: 2px solid #333;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .interval-btn {
+      flex: 0 0 56px;
+      padding: 10px 0;
+      font-size: 1.8rem;
+      font-weight: bold;
+      background: #222;
+      color: #aaa;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+      transition: background 0.1s;
+    }
+    .interval-btn:active { background: #444; }
+    .interval-btn:disabled { color: #333; cursor: default; }
+    .interval-display {
+      flex: 1;
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #fff;
+      padding: 10px 4px;
+      line-height: 1.2;
+    }
+    .interval-display span {
+      display: block;
+      font-size: 0.7rem;
+      color: #555;
+      font-weight: normal;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* The big button */
+    .swallow-btn {
+      width: 100%;
+      padding: 16px 10px;
+      font-size: 1.4rem;
+      font-weight: bold;
+      background: #333;
+      color: #fff;
+      border: 2px solid #555;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .swallow-btn:active { background: #555; }
+
+    /* Flash animation on press */
+    @keyframes flash {
+      0%   { background: #2a7a2a; }
+      100% { background: #333; }
+    }
+    .swallow-btn.pressed {
+      animation: flash 0.6s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PILL 1 -->
+  <div class="pill-section" id="section1">
+    <input class="pill-name" id="name1" type="text" value="Paracetamol" placeholder="Pill name" />
+    <div class="elapsed unseen" id="elapsed1">Not yet taken</div>
+    <div class="elapsed-sub" id="sub1">Press button when you take this pill</div>
+
+    <!-- Tablet count -->
+    <div class="control-label">Tablets</div>
+    <div class="control-row">
+      <button class="dose-btn selected" id="dose1-1" onclick="setDose(1, 1)">1</button>
+      <button class="dose-btn"          id="dose1-2" onclick="setDose(1, 2)">2</button>
+    </div>
+
+    <!-- Dose interval -->
+    <div class="control-label">Hours between doses</div>
+    <div class="interval-row">
+      <button class="interval-btn" id="minus1" onclick="changeInterval(1, -1)">−</button>
+      <div class="interval-display" id="interval-display1">4<span>hours</span></div>
+      <button class="interval-btn" id="plus1"  onclick="changeInterval(1, +1)">+</button>
+    </div>
+
+    <button class="swallow-btn" id="btn1" onclick="pillTaken(1)">💊 PILL SWALLOWED</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- PILL 2 -->
+  <div class="pill-section" id="section2">
+    <input class="pill-name" id="name2" type="text" value="Ibuprofen" placeholder="Pill name" />
+    <div class="elapsed unseen" id="elapsed2">Not yet taken</div>
+    <div class="elapsed-sub" id="sub2">Press button when you take this pill</div>
+
+    <!-- Tablet count -->
+    <div class="control-label">Tablets</div>
+    <div class="control-row">
+      <button class="dose-btn selected" id="dose2-1" onclick="setDose(2, 1)">1</button>
+      <button class="dose-btn"          id="dose2-2" onclick="setDose(2, 2)">2</button>
+    </div>
+
+    <!-- Dose interval -->
+    <div class="control-label">Hours between doses</div>
+    <div class="interval-row">
+      <button class="interval-btn" id="minus2" onclick="changeInterval(2, -1)">−</button>
+      <div class="interval-display" id="interval-display2">4<span>hours</span></div>
+      <button class="interval-btn" id="plus2"  onclick="changeInterval(2, +1)">+</button>
+    </div>
+
+    <button class="swallow-btn" id="btn2" onclick="pillTaken(2)">💊 PILL SWALLOWED</button>
+  </div>
+
+  <script>
+    // Register service worker for PWA install prompt
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('SW registration failed:', err);
+        });
+      });
+    }
+
+    const MIN_HOURS = 1;
+    const MAX_HOURS = 24;
+    const DEFAULT_HOURS = 4;
+
+    // State: tablet count and interval hours per pill
+    const dose     = { 1: 1, 2: 1 };
+    const interval = { 1: DEFAULT_HOURS, 2: DEFAULT_HOURS };
+
+    // ── Tablet count ─────────────────────────────────────────────
+    function setDose(pill, count) {
+      dose[pill] = count;
+      document.getElementById('dose' + pill + '-1').classList.toggle('selected', count === 1);
+      document.getElementById('dose' + pill + '-2').classList.toggle('selected', count === 2);
+    }
+
+    // ── Dose interval ─────────────────────────────────────────────
+    function changeInterval(pill, delta) {
+      const newVal = Math.min(MAX_HOURS, Math.max(MIN_HOURS, interval[pill] + delta));
+      if (newVal === interval[pill]) return;
+      interval[pill] = newVal;
+      localStorage.setItem('pillInterval' + pill, newVal);
+      renderInterval(pill);
+      updateDisplay(); // refresh countdown immediately
+    }
+
+    function renderInterval(pill) {
+      const h = interval[pill];
+      document.getElementById('interval-display' + pill).innerHTML =
+        h + '<span>hour' + (h === 1 ? '' : 's') + '</span>';
+      document.getElementById('minus' + pill).disabled = (h <= MIN_HOURS);
+      document.getElementById('plus'  + pill).disabled = (h >= MAX_HOURS);
+    }
+
+    // ── Persist & load ────────────────────────────────────────────
+    function load() {
+      for (let i = 1; i <= 2; i++) {
+        const savedName = localStorage.getItem('pillName' + i);
+        if (savedName) document.getElementById('name' + i).value = savedName;
+
+        const savedInterval = localStorage.getItem('pillInterval' + i);
+        interval[i] = savedInterval ? parseInt(savedInterval, 10) : DEFAULT_HOURS;
+        renderInterval(i);
+
+        const savedDose = localStorage.getItem('pillDoseCount' + i);
+        if (savedDose) setDose(i, parseInt(savedDose, 10));
+      }
+    }
+
+    document.getElementById('name1').addEventListener('change', () => {
+      localStorage.setItem('pillName1', document.getElementById('name1').value);
+    });
+    document.getElementById('name2').addEventListener('change', () => {
+      localStorage.setItem('pillName2', document.getElementById('name2').value);
+    });
+
+    // ── Record a dose ─────────────────────────────────────────────
+    function pillTaken(n) {
+      const now = Date.now();
+      localStorage.setItem('pillTs' + n, now);
+      localStorage.setItem('pillDoseCount' + n, dose[n]);
+      const btn = document.getElementById('btn' + n);
+      btn.classList.remove('pressed');
+      void btn.offsetWidth;
+      btn.classList.add('pressed');
+      updateDisplay();
+    }
+
+    // ── Formatting helpers ────────────────────────────────────────
+    function formatElapsed(ms) {
+      const totalSecs = Math.floor(ms / 1000);
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      if (h === 0) return m + 'm ago';
+      return h + 'h ' + m + 'm ago';
+    }
+
+    // ── Update display ────────────────────────────────────────────
+    function updateDisplay() {
+      const now = Date.now();
+      for (let i = 1; i <= 2; i++) {
+        const ts    = localStorage.getItem('pillTs' + i);
+        const elEl  = document.getElementById('elapsed' + i);
+        const subEl = document.getElementById('sub' + i);
+        const safeMs = interval[i] * 60 * 60 * 1000;
+
+        if (!ts) {
+          elEl.textContent = 'Not yet taken';
+          elEl.className   = 'elapsed unseen';
+          subEl.textContent = 'Press button when you take this pill';
+        } else {
+          const elapsed   = now - parseInt(ts, 10);
+          elEl.textContent = formatElapsed(elapsed);
+
+          const lastCount = localStorage.getItem('pillDoseCount' + i) || '1';
+          const doseNote  = ' · last: ' + lastCount + ' tablet' + (lastCount > 1 ? 's' : '');
+
+          if (elapsed >= safeMs) {
+            elEl.className    = 'elapsed due';
+            subEl.textContent = '✅ OK to take again' + doseNote;
+          } else {
+            elEl.className = 'elapsed safe';
+            const remaining = safeMs - elapsed;
+            const rh = Math.floor(remaining / 3600000);
+            const rm = Math.floor((remaining % 3600000) / 60000);
+            const timeStr = rh > 0 ? rh + 'h ' + rm + 'm' : rm + 'm';
+            subEl.textContent = timeStr + ' until next dose' + doseNote;
+          }
+        }
+      }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
+    load();
+    updateDisplay();
+    setInterval(updateDisplay, 30000);
+  </script>
+</body>
+</html>

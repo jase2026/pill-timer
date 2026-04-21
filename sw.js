@@ -1,5 +1,5 @@
 // Service Worker for Pill Timer PWA
-const CACHE_NAME = 'pill-timer-v1';
+const CACHE_NAME = 'pill-timer-v2';
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
